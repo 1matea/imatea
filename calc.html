@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Калькулятор дискретной математики</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1c2430;--mut:#6b7686;--bd:#dde1e8;--ac:#3b5bdb;--acs:#e7ecff;--ok:#e6f6ec;--er:#c92a2a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171c;--card:#1d2128;--tx:#e6e9ee;--mut:#8f9aab;--bd:#2f3541;--ac:#7c93ff;--acs:#262c45;--ok:#1b3326;--er:#ff8787;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171c;--card:#1d2128;--tx:#e6e9ee;--mut:#8f9aab;--bd:#2f3541;--ac:#7c93ff;--acs:#262c45;--ok:#1b3326;--er:#ff8787;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 14px 40px}
+h1{font-size:1.4rem;margin:0 0 4px}
+.sub{color:var(--mut);font-size:.9rem;margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+input[type=text]{width:100%;font:1.2rem ui-monospace,Menlo,Consolas,monospace;padding:10px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+input[type=text]:focus{outline:2px solid var(--ac);border-color:transparent}
+.keys{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+button{font:inherit;cursor:pointer;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:8px;padding:6px 12px;min-width:42px}
+button:hover{background:var(--acs);border-color:var(--ac)}
+.sep{width:1px;background:var(--bd);margin:0 4px}
+.ex{font-size:.85rem;color:var(--mut);margin-top:10px}
+.ex button{font:.85rem ui-monospace,Menlo,Consolas,monospace;padding:3px 8px;margin:2px 4px 2px 0}
+.err{color:var(--er);margin-top:10px;min-height:1.2em}
+.grid{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:640px){.grid{grid-template-columns:1fr 1fr}}
+.res{border:1px solid var(--bd);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.res b{display:block;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);margin-bottom:2px}
+.res span{font:1.02rem ui-monospace,Menlo,Consolas,monospace;word-break:break-word}
+.wide{grid-column:1/-1}
+.tw{overflow-x:auto}
+details.res{cursor:pointer}
+details.res summary{list-style:none}
+details.res summary::-webkit-details-marker{display:none}
+details.res summary b::after{content:" ▸"}
+details[open].res summary b::after{content:" ▾"}
+.steps{margin-top:8px;padding-top:8px;border-top:1px solid var(--bd);font-size:.92rem;cursor:auto}
+.steps p{margin:6px 0}
+.steps ul{margin:4px 0 6px;padding-left:20px}
+.steps code{font:.95rem ui-monospace,Menlo,Consolas,monospace;word-break:break-word}
+table.cv{font-size:.85rem}
+[hidden]{display:none!important}
+button{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.top h1{margin:0 0 4px}
+#theme{white-space:nowrap;font-size:.85rem}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tabs button{flex:1;min-width:120px;padding:9px 12px}
+.tabs button.on{background:var(--ac);border-color:var(--ac);color:var(--bg);font-weight:600}
+details.tt{margin-top:10px}
+details.tt>summary{cursor:pointer;color:var(--ac);font-weight:600}
+details.tt>summary::before{content:"▸ "}
+details.tt[open]>summary::before{content:"▾ "}
+table.cv tr.pick td,table.cv tr.pick th{background:var(--ok)}
+table{border-collapse:collapse;margin:8px auto 0;font:.95rem ui-monospace,Menlo,Consolas,monospace}
+th,td{border:1px solid var(--bd);padding:4px 10px;text-align:center;white-space:nowrap}
+th{background:var(--acs)}
+tr.one td.f{background:var(--ok);font-weight:700}
+td.f,th.f{border-left:2px solid var(--ac)}
+label{font-size:.9rem;color:var(--mut);cursor:pointer}
+.hint{font-size:.82rem;color:var(--mut);line-height:1.6}
+code{background:var(--bg);padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><h1>Калькулятор логических выражений</h1><button type="button" id="theme"></button></div>
+<p class="sub">Таблица истинности, СДНФ, СКНФ, минимальные ДНФ и КНФ с пошаговым выводом. До 4 переменных.</p>
+
+<div class="card">
+<input type="text" id="f" value="(x→y)∧(y→z)→(x→z)" autocomplete="off" spellcheck="false" aria-label="Формула">
+<div class="keys" id="keys"></div>
+<div class="ex">Примеры: <span id="ex"></span></div>
+<div class="err" id="err"></div>
+</div>
+
+<div id="out"></div>
+
+<div class="card hint">
+<b>Ввод операций.</b> Отрицание: <code>¬</code> <code>!</code> <code>~</code>; конъюнкция: <code>∧</code> <code>&amp;</code> <code>*</code>; дизъюнкция: <code>∨</code> <code>|</code> <code>+</code>; импликация: <code>→</code> <code>-&gt;</code> <code>&gt;</code>; эквиваленция: <code>↔</code> <code>&lt;-&gt;</code> <code>==</code>; сложение по модулю 2: <code>⊕</code> <code>^</code> <code>xor</code>. Константы <code>0</code> и <code>1</code>. Переменные: любые латинские буквы (не больше 4 разных).<br>
+<b>Приоритет:</b> ¬, ∧, ⊕, ∨, →, ↔. Импликация правоассоциативна. Блок «Формула со скобками» показывает, как формула разобрана.
+</div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let page='t';
+const sec=(k,c)=>'<section class="card" data-s="'+k+'"'+(page===k?'':' hidden')+'>'+c+'</section>';
+const SYM={not:'¬',and:'∧',or:'∨',xor:'⊕',imp:'→',eqv:'↔'};
+const MAP={'¬':'not','!':'not','~':'not','∧':'and','&':'and','*':'and','·':'and','∨':'or','|':'or','+':'or','⊕':'xor','^':'xor','→':'imp','>':'imp','↔':'eqv','=':'eqv','≡':'eqv','(':'(',')':')'};
+
+function tokenize(s){
+  const t=[];let i=0;
+  while(i<s.length){
+    const c=s[i],r=s.slice(i);
+    if(/\s/.test(c)){i++;continue}
+    let m;
+    if((m=r.match(/^(<->|<=>|==)/))){t.push({k:'eqv'});i+=m[0].length;continue}
+    if((m=r.match(/^(->|=>)/))){t.push({k:'imp'});i+=2;continue}
+    if(r.startsWith('/\\')){t.push({k:'and'});i+=2;continue}
+    if(r.startsWith('\\/')){t.push({k:'or'});i+=2;continue}
+    if(/^xor/i.test(r)){t.push({k:'xor'});i+=3;continue}
+    if(MAP[c]){t.push({k:MAP[c]});i++;continue}
+    if(c==='0'||c==='1'){t.push({k:'const',v:+c});i++;continue}
+    if(/[A-Za-z]/.test(c)){t.push({k:'var',n:c});i++;continue}
+    throw new Error('Неизвестный символ «'+c+'»');
+  }
+  return t;
+}
+function parse(tokens){
+  let p=0;const peek=()=>tokens[p]&&tokens[p].k;
+  const bin=(op,l,r)=>({t:'bin',op,l,r});
+  function left(next,op){return()=>{let l=next();while(peek()===op){p++;l=bin(op,l,next())}return l}}
+  const pNot=()=>{
+    const k=peek();
+    if(k==='not'){p++;return{t:'not',a:pNot()}}
+    if(k==='('){p++;const e=pEqv();if(peek()!==')')throw new Error('Не хватает закрывающей скобки');p++;return e}
+    if(k==='var'){return{t:'var',n:tokens[p++].n}}
+    if(k==='const'){return{t:'const',v:tokens[p++].v}}
+    throw new Error(k?'Неожиданный знак «'+(SYM[k]||k)+'»':'Формула оборвана: ожидается переменная или скобка');
+  };
+  const pAnd=left(pNot,'and'),pXor=left(pAnd,'xor'),pOr=left(pXor,'or');
+  const pImp=()=>{const l=pOr();if(peek()==='imp'){p++;return bin('imp',l,pImp())}return l};
+  const pEqv=left(pImp,'eqv');
+  const e=pEqv();
+  if(p<tokens.length)throw new Error(peek()===')'?'Лишняя закрывающая скобка':'Пропущена операция между переменными');
+  return e;
+}
+function ev(n,e){
+  switch(n.t){
+    case'var':return e[n.n];case'const':return n.v;case'not':return 1-ev(n.a,e);
+  }
+  const a=ev(n.l,e),b=ev(n.r,e);
+  switch(n.op){
+    case'and':return a&b;case'or':return a|b;case'xor':return a^b;
+    case'imp':return a?b:1;case'eqv':return a===b?1:0;
+  }
+}
+function str(n,top){
+  if(n.t==='var')return n.n;
+  if(n.t==='const')return String(n.v);
+  if(n.t==='not')return'¬'+str(n.a);
+  const s=str(n.l)+' '+SYM[n.op]+' '+str(n.r);
+  return top?s:'('+s+')';
+}
+function vars(n,s=new Set()){
+  if(n.t==='var')s.add(n.n);
+  else if(n.t==='not')vars(n.a,s);
+  else if(n.t==='bin'){vars(n.l,s);vars(n.r,s)}
+  return s;
+}
+function subs(n,out=[],seen=new Set()){
+  if(n.t==='not')subs(n.a,out,seen);
+  if(n.t==='bin'){subs(n.l,out,seen);subs(n.r,out,seen)}
+  if(n.t==='not'||n.t==='bin'){const k=str(n);if(!seen.has(k)){seen.add(k);out.push(n)}}
+  return out;
+}
+
+/* Квайн–Мак-Класки */
+function minimize(ones,n){
+  const bits=m=>m.toString(2).padStart(n,'0');
+  let cur=new Set(ones.map(bits));const primes=[],rounds=[];
+  const merge=(a,b)=>{let pos=-1;for(let k=0;k<n;k++)if(a[k]!==b[k]){if(a[k]==='-'||b[k]==='-'||pos>=0)return null;pos=k}return pos<0?null:a.slice(0,pos)+'-'+a.slice(pos+1)};
+  while(cur.size){
+    const arr=[...cur],used=new Set(),next=new Set(),mg=[];
+    for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){
+      const m=merge(arr[i],arr[j]);if(m){next.add(m);used.add(arr[i]);used.add(arr[j]);mg.push([arr[i],arr[j],m])}
+    }
+    arr.forEach(a=>{if(!used.has(a))primes.push(a)});rounds.push({mg});
+    cur=next;
+  }
+  const cov=(p,m)=>{const b=bits(m);for(let k=0;k<n;k++)if(p[k]!=='-'&&p[k]!==b[k])return false;return true};
+  const lit=p=>p.replace(/-/g,'').length;
+  let best=null;
+  for(let mask=1;mask<(1<<primes.length);mask++){
+    const ch=primes.filter((_,i)=>mask>>i&1);
+    if(!ones.every(m=>ch.some(p=>cov(p,m))))continue;
+    const sc=[ch.length,ch.reduce((s,p)=>s+lit(p),0)];
+    if(!best||sc[0]<best.sc[0]||(sc[0]===best.sc[0]&&sc[1]<best.sc[1]))best={ch,sc};
+  }
+  return {chosen:best.ch,primes,rounds};
+}
+
+const matches=(p,i,n)=>{const b=i.toString(2).padStart(n,'0');for(let k=0;k<n;k++)if(p[k]!=='-'&&p[k]!==b[k])return false;return true};
+function render(){
+  const openK=[...document.querySelectorAll('details[open]')].map(d=>d.dataset.k);
+  const err=$('err'),out=$('out');err.textContent='';
+  const src=$('f').value.trim();
+  if(!src){out.innerHTML='';return}
+  let tree,vs;
+  try{
+    tree=parse(tokenize(src));
+    vs=[...vars(tree)].sort((a,b)=>a.toLowerCase()<b.toLowerCase()?-1:a.toLowerCase()>b.toLowerCase()?1:a<b?-1:1);
+    if(vs.length>4)throw new Error('Переменных '+vs.length+' ('+vs.join(', ')+'), а допускается не больше 4');
+  }catch(e){err.textContent=e.message;return}
+  const n=vs.length,N=1<<n,sf=subs(tree).filter(x=>x!==tree);
+  const env=i=>{const o={};vs.forEach((v,k)=>o[v]=(i>>(n-1-k))&1);return o};
+  const vec=[];for(let i=0;i<N;i++)vec.push(ev(tree,env(i)));
+  const ones=[],zeros=[];vec.forEach((v,i)=>(v?ones:zeros).push(i));
+  const L=(v,val)=>val?v:'¬'+v;
+  const bitsOf=i=>i.toString(2).padStart(n,'0');
+
+  const tm=(p,m)=>{const ls=vs.map((v,k)=>p[k]==='-'?null:L(v,m==='d'?+p[k]:1-p[k])).filter(Boolean);return m==='d'?(ls.join('∧')||'1'):ls.length>1?'('+ls.join(' ∨ ')+')':(ls[0]||'0')};
+  const rl=i=>vs.map((v,k)=>v+'='+bitsOf(i)[k]).join(', ');
+  const sdnf=ones.length?ones.map(i=>{const b=bitsOf(i);return vs.map((v,k)=>L(v,+b[k])).join('∧')||'1'}).join(' ∨ '):'0';
+  const scnf=zeros.length?zeros.map(i=>{const b=bitsOf(i);return'('+(vs.map((v,k)=>L(v,1-b[k])).join(' ∨ ')||'0')+')'}).join(' ∧ '):'1';
+  let mdnf,mcnf,mq,cq;
+  if(!ones.length)mdnf='0';else if(ones.length===N)mdnf='1';
+  else{mq=minimize(ones,n);mdnf=mq.chosen.map(p=>tm(p,'d')).join(' ∨ ')}
+  if(!zeros.length)mcnf='1';else if(zeros.length===N)mcnf='0';
+  else{cq=minimize(zeros,n);mcnf=cq.chosen.map(p=>tm(p,'c')).join(' ∧ ')}
+  const perfect=m=>{
+    const d=m==='d',rs=d?ones:zeros;
+    if(!rs.length)return '<p>'+(d?'Строк с F = 1 нет, СДНФ пуста: F ≡ 0.':'Строк с F = 0 нет, СКНФ пуста: F ≡ 1.')+'</p>';
+    const rule=d?'Для каждой такой строки записываем конъюнкцию всех переменных: переменная со значением 1 берётся как есть, со значением 0 — с отрицанием.':'Для каждой такой строки записываем дизъюнкцию всех переменных: переменная со значением 0 берётся как есть, со значением 1 — с отрицанием.';
+    return '<p>1. В таблице истинности отмечаем строки, где F = '+(d?1:0)+'.</p><p>2. '+rule+'</p><ul>'+rs.map(i=>'<li>'+(rl(i)||'—')+' → <code>'+tm(bitsOf(i),m)+'</code></li>').join('')+'</ul><p>3. Соединяем '+(d?'конъюнкции знаком ∨':'дизъюнкции знаком ∧')+':</p><p><code>'+(d?sdnf:scnf)+'</code></p>';
+  };
+  const minim=(m,q)=>{
+    const d=m==='d',rs=d?ones:zeros,nm=d?'минтермы':'макстермы',op=d?' ∨ ':' ∧ ';
+    if(!rs.length||rs.length===N)return '<p>'+(d?(rs.length?'F истинна на всех наборах, ДНФ = 1.':'F ложна на всех наборах, ДНФ = 0.'):(rs.length?'F ложна на всех наборах, КНФ = 0.':'F истинна на всех наборах, КНФ = 1.'))+'</p>';
+    const T=p=>'<code>'+tm(p,m)+'</code>';
+    let h=alg(m,0)+'<p>Для минимизации достраиваем '+(d?'термы недостающими переменными (A = A∧x ∨ A∧¬x)':'дизъюнкции недостающими переменными (A = (A∨x)∧(A∨¬x))')+' и получаем '+(d?'СДНФ':'СКНФ')+': '+rs.map(i=>T(bitsOf(i))).join(', ')+'.</p>';
+    h+='<p>Склеиваем соседние '+nm+' (отличаются значением одной переменной), эта переменная пропадает: <code>'+(d?'x∧y ∨ x∧¬y = x':'(x∨y)∧(x∨¬y) = x')+'</code>. Повторяем, пока склеивание возможно.</p>';
+    let any=0;
+    q.rounds.forEach(r=>{if(r.mg.length){any=1;h+='<ul>'+r.mg.map(g=>'<li>'+T(g[0])+op+T(g[1])+' = '+T(g[2])+'</li>').join('')+'</ul>'}});
+    if(!any)h+='<p>Склеивать нечего.</p>';
+    h+='<p>Простые '+(d?'импликанты':'импликенты')+' (термы, которые дальше не склеиваются): '+q.primes.map(T).join(', ')+'.</p>';
+    h+='<p>Таблица покрытия: × означает, что терм покрывает исходный '+(d?'минтерм':'макстерм')+'. Выбираем наименьший набор строк, покрывающий все столбцы (при равенстве — с меньшим числом букв); выбранные строки подсвечены.</p>';
+    h+='<div class="tw"><table class="cv"><tr><th></th>'+rs.map(i=>'<th>'+bitsOf(i)+'</th>').join('')+'</tr>'+q.primes.map(p=>'<tr class="'+(q.chosen.includes(p)?'pick':'')+'"><th>'+tm(p,m)+'</th>'+rs.map(i=>'<td>'+(matches(p,i,n)?'×':'')+'</td>').join('')+'</tr>').join('')+'</table></div>';
+    h+='<p>Соединяем выбранные термы знаком '+op.trim()+':</p><p><code>'+(d?mdnf:mcnf)+'</code></p>';
+    return h;
+  };
+
+  const ts1=(t,m)=>{const s=t.length?t.join(m==='d'?'∧':' ∨ '):(m==='d'?'1':'0');return m==='c'&&t.length>1?'('+s+')':s};
+  const fm=(S,m)=>S.length?S.map(t=>ts1(t,m)).join(m==='d'?' ∨ ':' ∧ '):(m==='d'?'0':'1');
+  const lt=(p,m)=>vs.map((v,k)=>p[k]==='-'?null:L(v,m==='d'?+p[k]:1-p[k])).filter(Boolean);
+  const SS={sd:ones.map(i=>vs.map((v,k)=>L(v,+bitsOf(i)[k]))),sc:zeros.map(i=>vs.map((v,k)=>L(v,1-bitsOf(i)[k]))),
+    md:!ones.length?[]:ones.length===N?[[]]:mq.chosen.map(p=>lt(p,'d')),
+    mc:!zeros.length?[]:zeros.length===N?[[]]:cq.chosen.map(p=>lt(p,'c'))};
+  const TT=(k,S,m)=>{
+    const d=m==='d',val=(l,e)=>l[0]==='¬'?1-e[l.slice(1)]:e[l],tv=(t,e)=>+(d?t.every(l=>val(l,e)):t.some(l=>val(l,e)));
+    const f=e=>+(d?S.some(t=>tv(t,e)):S.every(t=>tv(t,e))),ts=S.length&&S.length<=8?S:[];
+    let ok=1,rows='';
+    for(let i=0;i<N;i++){const e=env(i),r=f(e);if(r!==vec[i])ok=0;rows+='<tr class="'+(r?'one':'')+'">'+vs.map(v=>'<td>'+e[v]+'</td>').join('')+ts.map(t=>'<td>'+tv(t,e)+'</td>').join('')+'<td class="f">'+r+'</td><td>'+vec[i]+'</td></tr>'}
+    return '<details class="tt" data-k="'+k+'"'+(openK.includes(k)?' open':'')+'><summary>Таблица истинности этой формы</summary><div class="tw"><table><tr>'+vs.map(v=>'<th>'+v+'</th>').join('')+ts.map(t=>'<th>'+ts1(t,m)+'</th>').join('')+'<th class="f">Форма</th><th>F</th></tr>'+rows+'</table></div><p>'+(ok?'Столбцы «Форма» и F совпадают во всех строках: формула равносильна исходной.':'Столбцы «Форма» и F не совпадают.')+'</p></details>';
+  };
+  const alg=(m,full)=>{try{
+    const d=m==='d',C=s=>'<code>'+s+'</code>',nf=d?'ДНФ':'КНФ',U={},U2={};let k=0;
+    const P=t=>'<p><b>'+(++k)+'.</b> '+t+'</p>',B=(op,l,r)=>({t:'bin',op,l,r});
+    let h=P('Исходная формула: '+C(str(tree,true)));
+    const el=n=>{
+      if(n.t==='not')return{t:'not',a:el(n.a)};
+      if(n.t!=='bin')return n;
+      const a=el(n.l),b=el(n.r),na={t:'not',a},nb={t:'not',a:b};
+      if(n.op==='imp'){U.imp=1;return B('or',na,b)}
+      if(n.op==='eqv'){U.eqv=1;return d?B('or',B('and',a,b),B('and',na,nb)):B('and',B('or',na,b),B('or',a,nb))}
+      if(n.op==='xor'){U.xor=1;return d?B('or',B('and',a,nb),B('and',na,b)):B('and',B('or',a,b),B('or',na,nb))}
+      return B(n.op,a,b);
+    };
+    const t1=el(tree),L1=[];
+    if(U.eqv)L1.push(d?'A↔B = (A∧B)∨(¬A∧¬B)':'A↔B = (¬A∨B)∧(A∨¬B)');
+    if(U.xor)L1.push(d?'A⊕B = (A∧¬B)∨(¬A∧B)':'A⊕B = (A∨B)∧(¬A∨¬B)');
+    if(U.imp)L1.push('A→B = ¬A∨B');
+    if(L1.length)h+=P('Выражаем ↔, ⊕, → через ∧, ∨, ¬ ('+L1.join('; ')+'): '+C(str(t1,true)));
+    const ng=(n,neg)=>{
+      if(n.t==='not'){if(neg)U2.dn=1;return ng(n.a,!neg)}
+      if(n.t==='var')return neg?{t:'not',a:n}:n;
+      if(n.t==='const')return neg?{t:'const',v:1-n.v}:n;
+      if(neg)U2.dm=1;
+      return B(neg?(n.op==='and'?'or':'and'):n.op,ng(n.l,neg),ng(n.r,neg));
+    };
+    const t2=ng(t1,false),L2=[];
+    if(U2.dm)L2.push('законы де Моргана: ¬(A∧B) = ¬A∨¬B, ¬(A∨B) = ¬A∧¬B');
+    if(U2.dn)L2.push('двойное отрицание: ¬¬A = A');
+    if(L2.length)h+=P('Переносим отрицания к переменным ('+L2.join('; ')+'): '+C(str(t2,true)));
+    const ex=n=>{
+      if(n.t==='var')return[[n.n]];
+      if(n.t==='not')return[['¬'+n.a.n]];
+      if(n.t==='const')return n.v===(d?1:0)?[[]]:[];
+      const A=ex(n.l),Bb=ex(n.r);
+      if((n.op==='and')===d){if(A.length*Bb.length>3000)throw 0;const o=[];A.forEach(x=>Bb.forEach(y=>o.push(x.concat(y))));return o}
+      return A.concat(Bb);
+    };
+    let S=ex(t2);
+    h+=P('Раскрываем скобки по дистрибутивности ('+(d?'A∧(B∨C) = A∧B ∨ A∧C':'A∨(B∧C) = (A∨B)∧(A∨C)')+') и убираем лишние скобки по ассоциативности: '+C(fm(S,m)));
+    const fl={},opp=l=>l[0]==='¬'?l.slice(1):'¬'+l;
+    S=S.map(t=>{const u=[...new Set(t)];if(u.length<t.length)fl.id=1;return u});
+    S=S.filter(t=>{const bad=t.some(l=>t.includes(opp(l)));if(bad)fl.co=1;return !bad});
+    const seen=new Set();
+    S=S.filter(t=>{const q=[...t].sort().join(',');if(seen.has(q)){fl.id=1;return false}seen.add(q);return true});
+    S=S.filter(t=>{const ab=S.some(s=>s.length<t.length&&s.every(l=>t.includes(l)));if(ab)fl.ab=1;return !ab});
+    const L3=[];
+    if(fl.id)L3.push('идемпотентность: A∧A = A, A∨A = A');
+    if(fl.co)L3.push(d?'A∧¬A = 0, A∨0 = A':'A∨¬A = 1, A∧1 = A');
+    if(fl.ab)L3.push(d?'поглощение: A∨A∧B = A':'поглощение: A∧(A∨B) = A');
+    h+=P((L3.length?'Упрощаем ('+L3.join('; ')+')':'Упрощать нечего')+', получаем '+nf+': '+C(fm(S,m)));
+    if(full){
+      const rows=S.map(t=>{const miss=vs.filter(v=>!t.some(l=>l.replace('¬','')===v));let o=[t];miss.forEach(v=>{o=o.flatMap(x=>[x.concat(v),x.concat('¬'+v)])});return{t,miss,o}}).filter(r=>r.miss.length);
+      h+=P(rows.length?'Достраиваем недостающие переменные ('+(d?'A = A∧(x∨¬x) = A∧x ∨ A∧¬x':'A = A∨(x∧¬x) = (A∨x)∧(A∨¬x)')+'):<ul>'+rows.map(r=>'<li>'+C(fm([r.t],m))+' = '+C(fm(r.o,m))+'</li>').join('')+'</ul>':'Все '+(d?'конъюнкции':'дизъюнкции')+' уже содержат все переменные.');
+      h+=P('Упорядочиваем переменные (коммутативность) и убираем повторы (идемпотентность): '+C(d?sdnf:scnf)+' — это '+(d?'СДНФ':'СКНФ')+'.');
+    }
+    return h;
+  }catch(e){return '<p>Преобразование слишком громоздкое для пошагового показа.</p>'}};
+  const type=ones.length===N?'Тавтология (тождественно истинна)':!ones.length?'Противоречие (тождественно ложна)':'Выполнима, не тавтология';
+
+
+  let head='<tr>'+vs.map(v=>'<th>'+v+'</th>').join('')+sf.map(x=>'<th>'+str(x,true)+'</th>').join('')+'<th class="f">'+str(tree,true)+'</th></tr>';
+  let rows='';
+  for(let i=0;i<N;i++){
+    const e=env(i);
+    rows+='<tr class="'+(vec[i]?'one':'')+'">'+vs.map(v=>'<td>'+e[v]+'</td>').join('')+sf.map(x=>'<td>'+ev(x,e)+'</td>').join('')+'<td class="f">'+vec[i]+'</td></tr>';
+  }
+  const R=(t,v,w)=>'<div class="res'+(w?' wide':'')+'"><b>'+t+'</b><span>'+v+'</span></div>';
+  const D=(k,t,v,body,S,m)=>'<details class="res wide" data-k="'+k+'"'+(openK.includes(k)?' open':'')+'><summary><b>'+t+'</b><span>'+v+'</span></summary><div class="steps">'+body+TT(k+'t',S,m)+'</div></details>';
+  out.innerHTML=
+      '<div class="card"><div class="grid">'+
+   R('Формула со скобками',str(tree,true),1)+
+   R('Тип',type,1)+
+   '</div></div>'+
+   '<div class="tabs">'+[['t','Таблица истинности'],['m','ДНФ и КНФ'],['p','СДНФ и СКНФ']].map(x=>'<button type="button" data-pg="'+x[0]+'" class="'+(page===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div>'+
+   sec('t','<div class="tw"><table>'+head+rows+'</table></div>')+
+   sec('m','<div class="grid"><div class="hint wide">Нажмите на формулу, чтобы увидеть вывод по законам логики и таблицу истинности.</div>'+
+     D('md','Минимальная ДНФ',mdnf,minim('d',mq),SS.md,'d')+D('mc','Минимальная КНФ',mcnf,minim('c',cq),SS.mc,'c')+'</div>')+
+   sec('p','<div class="grid"><div class="hint wide">Нажмите на формулу, чтобы увидеть вывод по законам логики и таблицу истинности.</div>'+
+     D('sd','СДНФ',sdnf,alg('d',1),SS.sd,'d')+D('sc','СКНФ',scnf,alg('c',1),SS.sc,'c')+'</div>');
+}
+
+/* Кнопки и примеры */
+const keys=[['¬','¬'],['∧','∧'],['∨','∨'],['→','→'],['↔','↔'],['⊕','⊕'],['(','('],[')',')'],['0','0'],['1','1'],null,['x','x'],['y','y'],['z','z'],['w','w'],null,['⌫','back'],['Очистить','clear']];
+const kb=$('keys'),inp=$('f');
+keys.forEach(k=>{
+  if(!k){const s=document.createElement('span');s.className='sep';kb.appendChild(s);return}
+  const b=document.createElement('button');b.type='button';b.textContent=k[0];
+  const act=()=>{
+    const a=inp.selectionStart,e=inp.selectionEnd,v=inp.value;
+    if(k[1]==='clear'){inp.value=''}
+    else if(k[1]==='back'){
+      if(a!==e){inp.value=v.slice(0,a)+v.slice(e);inp.setSelectionRange(a,a)}
+      else if(a>0){inp.value=v.slice(0,a-1)+v.slice(a);inp.setSelectionRange(a-1,a-1)}
+    }else{inp.value=v.slice(0,a)+k[1]+v.slice(e);inp.setSelectionRange(a+k[1].length,a+k[1].length)}
+    inp.focus();render();
+  };
+  if(k[1]==='back'){
+    let t1,t2;const stop=()=>{clearTimeout(t1);clearInterval(t2)};
+    b.addEventListener('pointerdown',e=>{e.preventDefault();act();stop();t1=setTimeout(()=>{t2=setInterval(act,60)},400)});
+    ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+    b.onclick=e=>{if(e.detail===0)act()};
+  }else b.onclick=act;
+  b.oncontextmenu=e=>e.preventDefault();
+  kb.appendChild(b);
+});
+['(x→y)∧(y→z)→(x→z)','x⊕y↔¬(x↔y)','¬(x∧y)↔¬x∨¬y','(x∨y)∧¬z⊕w','x→(y→x)'].forEach(s=>{
+  const b=document.createElement('button');b.type='button';b.textContent=s;
+  b.onclick=()=>{inp.value=s;render()};$('ex').appendChild(b);
+});
+inp.addEventListener('input',render);
+const THEMES=['system','light','dark'],TN={system:'🖥 Системная',light:'☀ Светлая',dark:'🌙 Тёмная'};
+let th='system';try{th=localStorage.getItem('dc-theme')||'system'}catch(e){}
+if(!THEMES.includes(th))th='system';
+function applyTheme(){const r=document.documentElement;if(th==='system')r.removeAttribute('data-theme');else r.setAttribute('data-theme',th);$('theme').textContent='Тема: '+TN[th]}
+$('theme').onclick=()=>{th=THEMES[(THEMES.indexOf(th)+1)%3];try{localStorage.setItem('dc-theme',th)}catch(e){}applyTheme()};
+applyTheme();
+$('out').onclick=e=>{const b=e.target.closest('[data-pg]');if(!b)return;page=b.dataset.pg;$('out').querySelectorAll('[data-pg]').forEach(x=>x.classList.toggle('on',x.dataset.pg===page));$('out').querySelectorAll('section[data-s]').forEach(s=>s.hidden=s.dataset.s!==page)};
+render();
+</script>
+</body>
+</html>
