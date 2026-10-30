@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Графический калькулятор</title>
+<style>
+:root{
+  --bg:#f3f5f1;--panel:#fbfcfa;--ink:#1d2a2a;--muted:#667470;--line:#d5dcd6;
+  --plot-bg:#fbfcf8;--grid:#e3e9e1;--grid-major:#c6d0c8;--axis:#2b3a3a;--accent:#1f6f6a;
+  --input:#ffffff;--danger:#c0392b;--shadow:0 1px 3px rgba(20,40,40,.18);
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10181a;--panel:#162124;--ink:#e3ece9;--muted:#8fa29d;--line:#2b3a3d;
+    --plot-bg:#0f1a1c;--grid:#1a282b;--grid-major:#2b4044;--axis:#c3d3cf;--accent:#5fc4bb;
+    --input:#0f1a1c;--danger:#ff7b6b;--shadow:0 1px 3px rgba(0,0,0,.5);color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10181a;--panel:#162124;--ink:#e3ece9;--muted:#8fa29d;--line:#2b3a3d;
+  --plot-bg:#0f1a1c;--grid:#1a282b;--grid-major:#2b4044;--axis:#c3d3cf;--accent:#5fc4bb;
+  --input:#0f1a1c;--danger:#ff7b6b;--shadow:0 1px 3px rgba(0,0,0,.5);color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+.app{display:flex;height:100%}
+aside{width:340px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.head{padding:16px 16px 8px}
+h1{font-size:19px;margin:0;font-weight:650;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px;margin-top:2px}
+.scroll{overflow-y:auto;padding:4px 16px 16px;flex:1;min-height:0}
+.row{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:8px;margin:8px 0 0}
+.row .err{grid-column:1/-1;color:var(--danger);font-size:12.5px;margin:-2px 0 0 2px}
+.row .err:empty{display:none}
+.dot{position:relative;width:22px;height:22px;cursor:pointer;display:block}
+.dot input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.dot span{position:absolute;inset:2px;border-radius:50%;border:2px solid var(--c);background:var(--c);transition:background .15s}
+.dot input:not(:checked)+span{background:transparent}
+.dot input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.lbl{color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace}
+.expr{width:100%;min-width:0;font:15px ui-monospace,Menlo,Consolas,monospace;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--input);color:var(--ink)}
+.expr:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.expr.bad{border-color:var(--danger)}
+button{font:inherit;color:var(--ink);background:var(--input);border:1px solid var(--line);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.del{width:30px;height:32px;font-size:18px;line-height:1;color:var(--muted)}
+.add{width:100%;margin-top:12px;padding:9px;border-style:dashed;color:var(--accent);font-weight:600}
+h2{font-size:13px;font-weight:650;margin:20px 0 6px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:4px 9px;font:13px ui-monospace,Menlo,Consolas,monospace;border-radius:999px}
+.par{display:grid;grid-template-columns:18px 1fr 52px;gap:8px;align-items:center;margin:6px 0}
+.par b{font-family:ui-monospace,Menlo,Consolas,monospace}
+.par input[type=range]{width:100%;accent-color:var(--accent)}
+.par output{font:13px ui-monospace,Menlo,Consolas,monospace;text-align:right}
+details{margin-top:18px;font-size:13px;color:var(--muted)}
+summary{cursor:pointer;color:var(--ink);font-weight:600}
+details p{margin:8px 0}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ink)}
+main{position:relative;flex:1;min-width:0;background:var(--plot-bg)}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+canvas.drag{cursor:grabbing}
+.tools{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px}
+.tools button{width:38px;height:38px;font-size:18px;box-shadow:var(--shadow);background:var(--panel)}
+#tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;box-shadow:var(--shadow);display:none;white-space:nowrap}
+#tip i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.mini{padding:2px 8px;font-size:12px;margin-left:8px}
+#kb{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+#kb button{padding:8px 0;font:14px ui-monospace,Menlo,Consolas,monospace;min-width:0}
+#kb .op{color:var(--accent)}#kb .fn{font-size:12px}
+.tools button.on{background:var(--accent);color:var(--plot-bg);border-color:var(--accent)}
+.ptf{display:flex;gap:6px;align-items:center}
+.ptf input{width:100%;min-width:0;padding:7px 8px;font:14px ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--line);border-radius:6px;background:var(--input);color:var(--ink)}
+.snap{display:block;margin:8px 0 4px;font-size:13px;color:var(--muted)}
+.pt{display:flex;justify-content:space-between;align-items:center;font:13px ui-monospace,Menlo,Consolas,monospace;margin:4px 0}
+.hint{color:var(--muted);font-size:13px;margin:4px 0}
+.btnrow{display:flex;gap:6px;margin-top:8px}.btnrow button{flex:1;padding:8px}
+.cand{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:8px;border:1px solid var(--line);border-radius:6px;margin:6px 0;cursor:pointer}
+.cand code{display:block;word-break:break-all;font-size:13px}.cand small{color:var(--muted)}.cand button{padding:6px 10px;flex:none}
+@media (max-width:760px){
+  .app{flex-direction:column-reverse}
+  aside{width:100%;height:44%;border-right:0;border-top:1px solid var(--line)}
+  main{flex:1}
+  .head{padding:10px 14px 0}.sub{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <div class="head"><h1>Графический калькулятор</h1><div class="sub">Перетаскивайте график, масштабируйте колёсиком или щипком</div></div>
+  <div class="scroll">
+    <div id="list"></div>
+    <button class="add" id="add">+ Добавить функцию</button>
+    <h2>Клавиатура<button class="mini" id="kbt" type="button">скрыть</button></h2>
+    <div id="kb"></div>
+    <h2>Точки</h2>
+    <div class="ptf"><input id="px" inputmode="decimal" placeholder="x" aria-label="x"><input id="py" inputmode="decimal" placeholder="y" aria-label="y"><button id="padd" style="padding:7px 10px">+</button></div>
+    <label class="snap"><input type="checkbox" id="snap"> Привязка к сетке при клике (📍)</label>
+    <div id="plist"></div>
+    <div class="btnrow"><button id="fitpts">Подобрать формулу</button><button id="clrpts">Очистить</button></div>
+    <h2>Рисунок → формула</h2>
+    <p class="hint" id="hint">Включите ✏️ на графике и нарисуйте кривую слева направо, либо поставьте точки и нажмите «Подобрать формулу».</p>
+    <div id="fitres"></div>
+    <h2>Примеры</h2>
+    <div class="chips" id="chips"></div>
+    <h2>Параметры</h2>
+    <div class="par"><b>a</b><input type="range" id="pa" min="-10" max="10" step="0.1" value="1"><output id="oa">1</output></div>
+    <div class="par"><b>b</b><input type="range" id="pb" min="-10" max="10" step="0.1" value="1"><output id="ob">1</output></div>
+    <details>
+      <summary>Как записывать функции</summary>
+      <p>Операции: <code>+ - * / ^</code>, скобки, умножение можно опускать: <code>2x</code>, <code>3(x+1)</code>.</p>
+      <p>Функции: <code>sin cos tan cot asin acos atan sinh cosh tanh sqrt cbrt abs exp ln log lg log2 floor ceil round sign min max</code>. Здесь <code>ln</code> — натуральный логарифм, <code>log</code> и <code>lg</code> — десятичный.</p>
+      <p>Константы: <code>pi</code> (или π), <code>e</code>. Переменная — <code>x</code>, параметры — <code>a</code> и <code>b</code>.</p>
+    </details>
+  </div>
+</aside>
+<main id="main">
+  <canvas id="cv"></canvas>
+  <div class="tools">
+    <button id="zin" title="Приблизить" aria-label="Приблизить">+</button>
+    <button id="zout" title="Отдалить" aria-label="Отдалить">−</button>
+    <button id="home" title="Сбросить вид" aria-label="Сбросить вид">⌂</button>
+    <button id="mpoint" title="Режим точек: нажимайте на график" aria-label="Режим точек">📍</button>
+    <button id="mdraw" title="Нарисовать график и получить формулу" aria-label="Режим рисования">✏️</button>
+  </div>
+  <div id="tip"></div>
+</main>
+</div>
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+var cv=$("#cv"),ctx=cv.getContext("2d"),main=$("#main"),tip=$("#tip");
+var W=0,H=0,dpr=1;
+var view={cx:0,cy:0,s:50};
+var params={a:1,b:1};
+var fns=[];
+var PALETTE=["#2f6fed","#e5484d","#18a058","#e09200","#8e4ec6","#0da2b8"];
+var EXAMPLES=["sin(x)","x^2-2","tan(x)","1/x","sqrt(x)","e^(-x^2)","a*sin(b*x)","ln(x)","abs(x)","x^3-3x"];
+
+/* ---------- Разбор выражений (без eval) ---------- */
+var FUNCS={
+  sin:Math.sin,cos:Math.cos,tan:Math.tan,tg:Math.tan,
+  cot:function(v){return 1/Math.tan(v)},ctg:function(v){return 1/Math.tan(v)},
+  asin:Math.asin,arcsin:Math.asin,acos:Math.acos,arccos:Math.acos,atan:Math.atan,arctan:Math.atan,arctg:Math.atan,
+  sinh:Math.sinh,cosh:Math.cosh,tanh:Math.tanh,sqrt:Math.sqrt,cbrt:Math.cbrt,abs:Math.abs,exp:Math.exp,
+  ln:Math.log,log:Math.log10,lg:Math.log10,log2:Math.log2,
+  floor:Math.floor,ceil:Math.ceil,round:Math.round,sign:Math.sign,min:Math.min,max:Math.max,pow:Math.pow
+};
+function tokenize(src){
+  var re=/\s*(?:(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?)|([A-Za-z\u03c0_][A-Za-z0-9_]*)|(.))/gy;
+  var out=[],m,s=src.replace(/\u2212/g,"-").replace(/[\u00d7\u00b7]/g,"*").replace(/\u00f7/g,"/").replace(/\*\*/g,"^");
+  re.lastIndex=0;
+  while(re.lastIndex<s.length){
+    m=re.exec(s);
+    if(!m)break;
+    if(m[1]!==undefined)out.push({t:"n",v:parseFloat(m[1])});
+    else if(m[2]!==undefined)out.push({t:"i",v:m[2]==="\u03c0"?"pi":m[2].toLowerCase()});
+    else if(m[3]!==undefined&&m[3].trim())out.push({t:"o",v:m[3]});
+  }
+  return out;
+}
+function compile(src){
+  var tk=tokenize(src),p=0;
+  if(!tk.length)return null;
+  function peek(){return tk[p]}
+  function isOp(v){return tk[p]&&tk[p].t==="o"&&tk[p].v===v}
+  function expect(v){if(!isOp(v))throw new Error("Ожидается «"+v+"»");p++}
+  function startsPrimary(){var t=tk[p];return t&&(t.t==="n"||t.t==="i"||(t.t==="o"&&t.v==="("))}
+  function expr(){
+    var l=term();
+    while(isOp("+")||isOp("-")){
+      var op=tk[p++].v,r=term();
+      l=(function(l,r,op){return op==="+"?function(x){return l(x)+r(x)}:function(x){return l(x)-r(x)}})(l,r,op);
+    }
+    return l;
+  }
+  function term(){
+    var l=unary();
+    for(;;){
+      var r;
+      if(isOp("*")||isOp("/")){
+        var op=tk[p++].v;r=unary();
+        l=(function(l,r,op){return op==="*"?function(x){return l(x)*r(x)}:function(x){return l(x)/r(x)}})(l,r,op);
+      }else if(startsPrimary()){
+        r=power();
+        l=(function(l,r){return function(x){return l(x)*r(x)}})(l,r);
+      }else break;
+    }
+    return l;
+  }
+  function unary(){
+    if(isOp("-")){p++;var u=unary();return function(x){return -u(x)}}
+    if(isOp("+")){p++;return unary()}
+    return power();
+  }
+  function power(){
+    var b=primary();
+    if(isOp("^")){
+      p++;var e=unary();
+      return function(x){return Math.pow(b(x),e(x))};
+    }
+    return b;
+  }
+  function primary(){
+    var t=tk[p];
+    if(!t)throw new Error("Неожиданный конец выражения");
+    if(t.t==="n"){p++;var v=t.v;return function(){return v}}
+    if(t.t==="o"&&t.v==="("){p++;var e=expr();expect(")");return e}
+    if(t.t==="i"){
+      p++;var n=t.v;
+      if(isOp("(")){
+        if(!FUNCS.hasOwnProperty(n))throw new Error("Неизвестная функция: "+n);
+        p++;var args=[expr()];
+        while(isOp(",")){p++;args.push(expr())}
+        expect(")");
+        var f=FUNCS[n];
+        if(args.length===1){var a0=args[0];return function(x){return f(a0(x))}}
+        return function(x){return f.apply(null,args.map(function(a){return a(x)}))};
+      }
+      if(n==="x")return function(x){return x};
+      if(n==="a")return function(){return params.a};
+      if(n==="b")return function(){return params.b};
+      if(n==="pi")return function(){return Math.PI};
+      if(n==="e")return function(){return Math.E};
+      throw new Error("Неизвестное имя: "+n);
+    }
+    throw new Error("Неожиданный символ: «"+t.v+"»");
+  }
+  var res=expr();
+  if(p<tk.length)throw new Error("Лишний символ: «"+tk[p].v+"»");
+  return res;
+}
+
+/* ---------- Список функций ---------- */
+var listEl=$("#list");
+function addFn(src){
+  var f={src:src||"",color:PALETTE[fns.length%PALETTE.length],on:true,fn:null};
+  fns.push(f);
+  var row=document.createElement("div");row.className="row";
+  row.innerHTML='<label class="dot" style="--c:'+f.color+'"><input type="checkbox" checked aria-label="Показать график"><span></span></label>'+
+    '<span class="lbl">y =</span><input class="expr" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="например, sin(x)" aria-label="Функция">'+
+    '<button class="del" title="Удалить" aria-label="Удалить функцию">×</button><div class="err"></div>';
+  var inp=row.querySelector(".expr"),err=row.querySelector(".err");
+  inp.value=f.src;inp.inputMode=kbOn?"none":"text";
+  function upd(){
+    f.src=inp.value;
+    try{f.fn=compile(f.src);err.textContent="";inp.classList.remove("bad")}
+    catch(e){f.fn=null;err.textContent=e.message;inp.classList.add("bad")}
+    draw();
+  }
+  inp.addEventListener("input",upd);
+  row.querySelector("input[type=checkbox]").addEventListener("change",function(e){f.on=e.target.checked;draw()});
+  row.querySelector(".del").addEventListener("click",function(){
+    fns.splice(fns.indexOf(f),1);row.remove();draw();
+  });
+  listEl.appendChild(row);
+  upd();
+  return inp;
+}
+$("#add").addEventListener("click",function(){addFn("").focus()});
+EXAMPLES.forEach(function(s){
+  var b=document.createElement("button");b.className="chip";b.textContent=s;
+  b.addEventListener("click",function(){addFn(s)});
+  $("#chips").appendChild(b);
+});
+["a","b"].forEach(function(k){
+  $("#p"+k).addEventListener("input",function(e){
+    params[k]=parseFloat(e.target.value);$("#o"+k).textContent=params[k];draw();
+  });
+});
+
+/* ---------- Отрисовка ---------- */
+function niceStep(raw){
+  var pw=Math.pow(10,Math.floor(Math.log10(raw))),m=raw/pw;
+  return (m<=1?1:m<=2?2:m<=5?5:10)*pw;
+}
+function fmt(v){
+  if(Math.abs(v)<1e-12)return "0";
+  var a=Math.abs(v);
+  if(a>=1e6||a<1e-4)return v.toExponential(2).replace("e+","e");
+  return String(parseFloat(v.toPrecision(10)));
+}
+function num(v){return String(parseFloat(v.toPrecision(5)))}
+function resize(){
+  dpr=window.devicePixelRatio||1;
+  W=main.clientWidth;H=main.clientHeight;
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+  draw();
+}
+function draw(){
+  if(!W)return;
+  var cs=getComputedStyle(document.documentElement);
+  var C=function(n){return cs.getPropertyValue(n).trim()};
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle=C("--plot-bg");ctx.fillRect(0,0,W,H);
+  var s=view.s;
+  var X=function(x){return W/2+(x-view.cx)*s},Y=function(y){return H/2-(y-view.cy)*s};
+  var x0=view.cx-W/2/s,x1=view.cx+W/2/s,y0=view.cy-H/2/s,y1=view.cy+H/2/s;
+  var step=niceStep(80/s),minor=step/5;snapStep=minor*s>9?minor:step;
+  /* сетка */
+  ctx.lineWidth=1;
+  function lines(st,col){
+    ctx.strokeStyle=col;ctx.beginPath();
+    var i,v;
+    for(i=Math.ceil(x0/st);i*st<=x1;i++){v=Math.round(X(i*st))+.5;ctx.moveTo(v,0);ctx.lineTo(v,H)}
+    for(i=Math.ceil(y0/st);i*st<=y1;i++){v=Math.round(Y(i*st))+.5;ctx.moveTo(0,v);ctx.lineTo(W,v)}
+    ctx.stroke();
+  }
+  if(minor*s>9)lines(minor,C("--grid"));
+  lines(step,C("--grid-major"));
+  /* оси */
+  var ax=Math.min(Math.max(X(0),0),W),ay=Math.min(Math.max(Y(0),0),H);
+  ctx.strokeStyle=C("--axis");ctx.lineWidth=1.5;ctx.beginPath();
+  ctx.moveTo(0,ay);ctx.lineTo(W,ay);ctx.moveTo(ax,0);ctx.lineTo(ax,H);ctx.stroke();
+  /* подписи */
+  ctx.fillStyle=C("--muted");ctx.font="12px ui-monospace,Menlo,Consolas,monospace";
+  var i,v,t;
+  ctx.textAlign="center";ctx.textBaseline="top";
+  var ty=ay+5;if(ty>H-18)ty=ay-19;
+  for(i=Math.ceil(x0/step);i*step<=x1;i++){
+    if(i===0)continue;v=i*step;t=fmt(v);
+    ctx.fillText(t,Math.min(Math.max(X(v),14),W-14),ty);
+  }
+  var left=ax<44;
+  ctx.textAlign=left?"left":"right";ctx.textBaseline="middle";
+  var tx=left?ax+6:ax-6;
+  for(i=Math.ceil(y0/step);i*step<=y1;i++){
+    if(i===0)continue;v=i*step;
+    ctx.fillText(fmt(v),tx,Math.min(Math.max(Y(v),10),H-10));
+  }
+  ctx.textAlign=left?"left":"right";ctx.textBaseline="top";
+  ctx.fillText("0",left?ax+6:ax-6,ty);
+  /* графики */
+  ctx.lineWidth=2.2;ctx.lineJoin="round";
+  fns.forEach(function(f){
+    if(!f.on||!f.fn)return;
+    ctx.strokeStyle=f.color;ctx.beginPath();
+    var pen=false,prev=0;
+    for(var px=0;px<=W;px+=.5){
+      var y=f.fn(view.cx+(px-W/2)/s);
+      if(typeof y!=="number"||!isFinite(y)){pen=false;continue}
+      var py=Math.max(-1e5,Math.min(1e5,Y(y)));
+      if(pen&&Math.abs(py-prev)>H*2)pen=false;
+      if(pen)ctx.lineTo(px,py);else ctx.moveTo(px,py);
+      pen=true;prev=py;
+    }
+    ctx.stroke();
+  });
+  /* предпросмотр, рисунок, точки */
+  if(preview){ctx.strokeStyle=C("--accent");ctx.lineWidth=2.5;ctx.setLineDash([8,6]);ctx.beginPath();var pp=false,pv=0;
+    for(var qx=0;qx<=W;qx+=1){var qy=preview(view.cx+(qx-W/2)/s);if(typeof qy!=="number"||!isFinite(qy)){pp=false;continue}
+      var qp=Math.max(-1e5,Math.min(1e5,Y(qy)));if(pp&&Math.abs(qp-pv)>H*2)pp=false;if(pp)ctx.lineTo(qx,qp);else ctx.moveTo(qx,qp);pp=true;pv=qp}
+    ctx.stroke();ctx.setLineDash([])}
+  if(stroke.length>1){ctx.strokeStyle="#d6336c";ctx.lineWidth=3;ctx.lineCap="round";ctx.beginPath();
+    stroke.forEach(function(q,k){var a=X(q.x),b=Y(q.y);if(k)ctx.lineTo(a,b);else ctx.moveTo(a,b)});ctx.stroke();ctx.lineCap="butt"}
+  pts.forEach(function(q){ctx.fillStyle="#d6336c";ctx.strokeStyle=C("--plot-bg");ctx.lineWidth=2;ctx.beginPath();ctx.arc(X(q.x),Y(q.y),5.5,0,7);ctx.fill();ctx.stroke()});
+  /* трассировка */
+  if(mouse&&!dragging){
+    var mx=view.cx+(mouse.x-W/2)/s,html="x = "+num(mx)+(mode!=="pan"?"<br>y = "+num(view.cy-(mouse.y-H/2)/s):""),any=false;
+    ctx.strokeStyle=C("--muted");ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(mouse.x+.5,0);ctx.lineTo(mouse.x+.5,H);ctx.stroke();ctx.setLineDash([]);
+    fns.forEach(function(f){
+      if(!f.on||!f.fn)return;
+      if(mode!=="pan")return;
+      var y=f.fn(mx);
+      if(typeof y!=="number"||!isFinite(y))return;
+      any=true;
+      html+='<br><i style="background:'+f.color+'"></i>'+num(y);
+      var py=Y(y);
+      if(py>-10&&py<H+10){
+        ctx.fillStyle=C("--plot-bg");ctx.strokeStyle=f.color;ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.arc(mouse.x,py,5,0,7);ctx.fill();ctx.stroke();
+      }
+    });
+    tip.innerHTML=html;tip.style.display="block";
+    var tw=tip.offsetWidth,th=tip.offsetHeight;
+    tip.style.left=Math.min(mouse.x+14,W-tw-6)+"px";
+    tip.style.top=Math.max(6,Math.min(mouse.y+14,H-th-6))+"px";
+  }else tip.style.display="none";
+}
+
+/* ---------- Управление ---------- */
+var mouse=null,dragging=false,ptrs=new Map();
+function zoomAt(px,py,k){
+  var wx=view.cx+(px-W/2)/view.s,wy=view.cy-(py-H/2)/view.s;
+  view.s=Math.max(.001,Math.min(1e6,view.s*k));
+  view.cx=wx-(px-W/2)/view.s;view.cy=wy+(py-H/2)/view.s;
+}
+cv.addEventListener("pointerdown",function(e){
+  cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
+  dragging=true;cv.classList.add("drag");
+  if(ptrs.size===1){down={id:e.pointerId,moved:0};if(mode==="draw"){stroke=[{x:wx(e.offsetX),y:wy(e.offsetY)}];preview=null;$("#fitres").innerHTML=""}}else if(down)down.moved=999;
+});
+cv.addEventListener("pointermove",function(e){
+  var nx=e.offsetX,ny=e.offsetY,p=ptrs.get(e.pointerId);
+  if(p){
+    if(down)down.moved+=Math.abs(nx-p.x)+Math.abs(ny-p.y);
+    if(mode==="draw"){if(ptrs.size===1)stroke.push({x:wx(nx),y:wy(ny)});mouse={x:nx,y:ny}}
+    else if(ptrs.size===1){view.cx-=(nx-p.x)/view.s;view.cy+=(ny-p.y)/view.s}
+    else if(ptrs.size===2){
+      var o=null;ptrs.forEach(function(v,k){if(k!==e.pointerId)o=v});
+      var d0=Math.hypot(p.x-o.x,p.y-o.y),d1=Math.hypot(nx-o.x,ny-o.y);
+      if(d0>0)zoomAt((nx+o.x)/2,(ny+o.y)/2,d1/d0);
+    }
+    p.x=nx;p.y=ny;
+  }else mouse={x:nx,y:ny};
+  draw();
+});
+function up(e){
+  if(e.type==="pointerup"&&down&&down.id===e.pointerId&&ptrs.size===1){
+    if(mode==="point"&&down.moved<6)addPoint(wx(e.offsetX),wy(e.offsetY),true);
+    else if(mode==="draw")finishStroke();
+  }
+  ptrs.delete(e.pointerId);
+  if(!ptrs.size)down=null;
+  if(!ptrs.size){dragging=false;cv.classList.remove("drag")}
+  if(e.pointerType!=="mouse"){mouse=null}else mouse={x:e.offsetX,y:e.offsetY};
+  draw();
+}
+cv.addEventListener("pointerup",up);
+cv.addEventListener("pointercancel",up);
+cv.addEventListener("pointerleave",function(e){if(e.pointerType==="mouse"&&!dragging){mouse=null;draw()}});
+cv.addEventListener("wheel",function(e){
+  e.preventDefault();
+  zoomAt(e.offsetX,e.offsetY,Math.exp(-e.deltaY*(e.deltaMode===1?.05:.0015)));
+  draw();
+},{passive:false});
+$("#zin").addEventListener("click",function(){zoomAt(W/2,H/2,1.4);draw()});
+$("#zout").addEventListener("click",function(){zoomAt(W/2,H/2,1/1.4);draw()});
+$("#home").addEventListener("click",function(){view.cx=0;view.cy=0;view.s=50;draw()});
+new ResizeObserver(resize).observe(main);
+if(window.matchMedia)window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
+
+/* ---------- Виртуальная клавиатура ---------- */
+var kbOn=true,activeInp=null;
+var KEYS=[
+ ["x","x"],["a","a"],["b","b"],["π","pi"],["e","e"],["⌫","",0,"op","bs"],
+ ["7","7"],["8","8"],["9","9"],["+","+",0,"op"],["−","-",0,"op"],["(","("],
+ ["4","4"],["5","5"],["6","6"],["×","*",0,"op"],["÷","/",0,"op"],[")",")"],
+ ["1","1"],["2","2"],["3","3"],["^","^",0,"op"],["x²","^2",0,"op"],["√","sqrt()",1,"op","f"],
+ ["0","0"],[".","."],[",",","],["←","",0,"op","l"],["→","",0,"op","r"],["C","",0,"op","c"]
+];
+"sin cos tan asin acos atan sinh cosh tanh sqrt abs ln log exp floor ceil min max".split(" ").forEach(function(n){
+  var m=n==="min"||n==="max";KEYS.push([n,n+(m?"(,)":"()"),m?2:1,"fn","f"]);
+});
+KEYS.forEach(function(k){
+  var b=document.createElement("button");b.type="button";b.textContent=k[0];b.className=k[3]||"";
+  b.addEventListener("mousedown",function(e){e.preventDefault()});
+  b.addEventListener("click",function(){press(k)});
+  $("#kb").appendChild(b);
+});
+listEl.addEventListener("focusin",function(e){if(e.target.classList.contains("expr"))activeInp=e.target});
+function press(k){
+  var inp=activeInp&&listEl.contains(activeInp)?activeInp:null;
+  if(!inp){var al=listEl.querySelectorAll(".expr");inp=al.length?al[al.length-1]:addFn("")}
+  inp.focus();
+  var v=inp.value,s=inp.selectionStart,e=inp.selectionEnd,nv=v,pos=s,act=k[4];
+  if(act==="c"){nv="";pos=0}
+  else if(act==="l")pos=s===e?Math.max(0,s-1):s;
+  else if(act==="r")pos=s===e?Math.min(v.length,e+1):e;
+  else if(act==="bs"){if(s===e&&s>0)s--;nv=v.slice(0,s)+v.slice(e);pos=s}
+  else{
+    var t=k[1];
+    if(act==="f"&&s!==e){t=t.slice(0,t.indexOf("(")+1)+v.slice(s,e)+")";nv=v.slice(0,s)+t+v.slice(e);pos=s+t.length}
+    else{nv=v.slice(0,s)+t+v.slice(e);pos=s+t.length-(k[2]||0)}
+  }
+  inp.value=nv;inp.setSelectionRange(pos,pos);
+  if(nv!==v)inp.dispatchEvent(new Event("input"));
+}
+$("#kbt").addEventListener("click",function(){
+  kbOn=!kbOn;$("#kb").style.display=kbOn?"":"none";this.textContent=kbOn?"скрыть":"показать";
+  listEl.querySelectorAll(".expr").forEach(function(i){i.inputMode=kbOn?"none":"text"});
+});
+
+/* ---------- Режимы, точки, рисунок ---------- */
+var mode="pan",pts=[],stroke=[],preview=null,down=null,snapStep=1;
+function wx(px){return view.cx+(px-W/2)/view.s}
+function wy(py){return view.cy-(py-H/2)/view.s}
+function setMode(m){
+  mode=m;$("#mpoint").classList.toggle("on",m==="point");$("#mdraw").classList.toggle("on",m==="draw");
+  if(m==="draw")$("#hint").textContent="Рисуйте кривую слева направо: формула появится ниже.";
+  if(m==="point")$("#hint").textContent="Нажимайте на график, чтобы ставить точки; затем «Подобрать формулу».";
+  draw();
+}
+$("#mpoint").addEventListener("click",function(){setMode(mode==="point"?"pan":"point")});
+$("#mdraw").addEventListener("click",function(){setMode(mode==="draw"?"pan":"draw")});
+function addPoint(x,y,snap){
+  if(snap&&$("#snap").checked){x=Math.round(x/snapStep)*snapStep;y=Math.round(y/snapStep)*snapStep}
+  pts.push({x:parseFloat(x.toPrecision(8)),y:parseFloat(y.toPrecision(8))});renderPts();draw();
+}
+function renderPts(){
+  var l=$("#plist");l.innerHTML="";
+  pts.forEach(function(p,i){
+    var d=document.createElement("div");d.className="pt";
+    var s=document.createElement("span");s.textContent="("+fmt(p.x)+", "+fmt(p.y)+")";
+    var b=document.createElement("button");b.className="del";b.textContent="×";b.setAttribute("aria-label","Удалить точку");
+    b.addEventListener("click",function(){pts.splice(i,1);renderPts();draw()});
+    d.appendChild(s);d.appendChild(b);l.appendChild(d);
+  });
+}
+$("#padd").addEventListener("click",function(){
+  var x=parseFloat($("#px").value.replace(",",".")),y=parseFloat($("#py").value.replace(",","."));
+  if(isNaN(x)||isNaN(y))return;
+  addPoint(x,y,false);$("#px").value="";$("#py").value="";
+});
+$("#clrpts").addEventListener("click",function(){pts=[];renderPts();draw()});
+$("#fitpts").addEventListener("click",function(){
+  if(pts.length<2){msg("Поставьте хотя бы две точки с разными x");return}
+  showFits(fitAll(pts.map(function(p){return p.x}),pts.map(function(p){return p.y})));
+});
+function msg(t){var b=$("#fitres");b.innerHTML="";var p=document.createElement("p");p.className="hint";p.textContent=t;b.appendChild(p)}
+function setPrev(f){try{preview=compile(f)}catch(e){preview=null}draw()}
+function showFits(c){
+  var box=$("#fitres");box.innerHTML="";
+  if(!c.length){msg("Не удалось подобрать формулу");return}
+  c.slice(0,3).forEach(function(r){
+    var d=document.createElement("div");d.className="cand";
+    var l=document.createElement("div"),code=document.createElement("code"),sm=document.createElement("small");
+    code.textContent="y = "+r.f;sm.textContent="R² = "+Math.max(0,r.r2).toFixed(3);
+    l.appendChild(code);l.appendChild(sm);
+    var b=document.createElement("button");b.textContent="Добавить";
+    b.addEventListener("click",function(e){e.stopPropagation();addFn(r.f);stroke=[];preview=null;box.innerHTML="";draw()});
+    d.appendChild(l);d.appendChild(b);
+    d.addEventListener("mouseenter",function(){setPrev(r.f)});
+    d.addEventListener("click",function(){setPrev(r.f)});
+    box.appendChild(d);
+  });
+  var cl=document.createElement("button");cl.className="mini";cl.style.margin="0";cl.textContent="Убрать рисунок";
+  cl.addEventListener("click",function(){stroke=[];preview=null;box.innerHTML="";draw()});
+  box.appendChild(cl);
+  setPrev(c[0].f);
+  box.scrollIntoView({block:"nearest",behavior:"smooth"});
+}
+function finishStroke(){
+  var n=stroke.length;if(n<5){stroke=[];draw();return}
+  var a=stroke.map(function(q){return q.x}),x0=Math.min.apply(null,a),x1=Math.max.apply(null,a);
+  if(x1-x0<30/view.s){msg("Линия слишком короткая: нарисуйте график слева направо");return}
+  var nb=Math.min(80,Math.floor(n/2)),S=[],i;
+  for(i=0;i<nb;i++)S.push([0,0,0]);
+  stroke.forEach(function(q){var b=S[Math.min(nb-1,Math.floor((q.x-x0)/(x1-x0)*nb))];b[0]+=q.x;b[1]+=q.y;b[2]++});
+  var xs=[],ys=[];
+  S.forEach(function(b){if(b[2]){xs.push(b[0]/b[2]);ys.push(b[1]/b[2])}});
+  showFits(fitAll(xs,ys));
+}
+
+/* ---------- Подбор формулы (метод наименьших квадратов) ---------- */
+function solve(B,y){
+  var m=B.length,n=y.length,A=[],i,j,k,r,sc=[];
+  var Bn=B.map(function(col,j){var s=Math.max.apply(null,col.map(Math.abs))||1;sc[j]=s;return col.map(function(v){return v/s})});
+  for(i=0;i<m;i++){A[i]=[];for(j=0;j<m;j++){var s=0;for(k=0;k<n;k++)s+=Bn[i][k]*Bn[j][k];A[i][j]=s}
+    var t=0;for(k=0;k<n;k++)t+=Bn[i][k]*y[k];A[i][m]=t}
+  var d=A.map(function(row,i){return row[i]});
+  for(i=0;i<m;i++){
+    var pv=i;for(r=i+1;r<m;r++)if(Math.abs(A[r][i])>Math.abs(A[pv][i]))pv=r;
+    if(!(Math.abs(A[pv][i])>1e-9*d[i]))return null;
+    var tmp=A[i];A[i]=A[pv];A[pv]=tmp;
+    for(r=0;r<m;r++){if(r===i)continue;var f=A[r][i]/A[i][i];for(k=i;k<=m;k++)A[r][k]-=f*A[i][k]}
+  }
+  return A.map(function(row,i){return row[m]/row[i]/sc[i]});
+}
+function r3(v){return parseFloat(v.toPrecision(3))}
+function mk(parts,tol){
+  var s="";
+  parts.forEach(function(p){
+    var c=r3(p[0]);if(!c||Math.abs(c)*(p[2]||1)<tol)return;
+    var a=Math.abs(c),b=p[1]?(a===1?p[1]:a+"*"+p[1]):String(a);
+    s+=s?(c<0?" - ":" + ")+b:(c<0?"-":"")+b;
+  });
+  return s||"0";
+}
+function fitAll(xs,ys){
+  var n=xs.length,res=[];
+  var mn=function(a){return Math.min.apply(null,a)},mxv=function(a){return Math.max.apply(null,a)};
+  var xmin=mn(xs),xmax=mxv(xs),rx=(xmax-xmin)||1,ry=(mxv(ys)-mn(ys))||1,tol=.01*ry;
+  var my=0,sst=0;ys.forEach(function(y){my+=y/n});ys.forEach(function(y){sst+=(y-my)*(y-my)});
+  var eps=Math.pow(1e-3*ry,2),ones=xs.map(function(){return 1});
+  function sc(m){return n*Math.log(m.sse/n+eps)+2*m.p*Math.log(Math.max(n,3))}
+  function qs(m){return m.c.map(function(c,j){return [c,mxv(m.B[j].map(Math.abs))]})}
+  function fit(B,p,minN){
+    if(n<minN)return null;
+    var c=solve(B,ys);if(!c)return null;
+    var sse=0,k,j;
+    for(k=0;k<n;k++){var yy=0;for(j=0;j<c.length;j++)yy+=c[j]*B[j][k];sse+=Math.pow(ys[k]-yy,2)}
+    return isFinite(sse)?{c:c,sse:sse,p:p,B:B}:null;
+  }
+  function lower(a,b){return a&&(!b||a.sse<b.sse)?a:b}
+  function pf(d){
+    var B=[],ex=[],i;
+    for(i=d;i>=0;i--){(function(i){B.push(xs.map(function(x){return Math.pow(x,i)}));ex.push(i?(i===1?"x":"x^"+i):"")})(i)}
+    var m=fit(B,d+1,d+1);
+    if(m)m.build=function(q){return mk(q.map(function(a,j){return [a[0],ex[j],a[1]]}),tol)};
+    return m;
+  }
+  var bp=null,d;
+  for(d=0;d<=5;d++){var m=pf(d);if(m){m.score=sc(m);if(!bp||m.score<bp.score)bp=m}}
+  var cand=[bp],s,k;
+  var bs=null;
+  if(n>=8)for(s=0;s<=160;s++){
+    k=2*Math.PI/(2*rx*Math.pow(1/16,s/160));
+    m=fit([xs.map(function(x){return Math.sin(k*x)}),xs.map(function(x){return Math.cos(k*x)}),ones],4,8);
+    if(m){m.k=k;bs=lower(m,bs)}
+  }
+  if(bs)bs.build=function(q){
+    var A=Math.sqrt(q[0][0]*q[0][0]+q[1][0]*q[1][0]),ph=Math.atan2(q[1][0],q[0][0]);
+    return mk([[A,"sin("+mk([[bs.k,"x"],[ph,""]],0)+")",1],[q[2][0],"",1]],tol);
+  };
+  var be=null;
+  for(s=-100;s<=100;s++){
+    if(!s)continue;k=s/100*10/rx;
+    m=fit([xs.map(function(x){return Math.exp(k*x)}),ones],2,4);
+    if(m){m.k=k;be=lower(m,be)}
+  }
+  if(be)be.build=function(q){return mk([[q[0][0],"e^("+mk([[be.k,"x"]],0)+")",q[0][1]],[q[1][0],"",1]],tol)};
+  function two(ok,f,ex){
+    if(!ok)return null;
+    var m=fit([xs.map(f),ones],2,4);
+    if(m)m.build=function(q){return mk([[q[0][0],ex,q[0][1]],[q[1][0],"",1]],tol)};
+    return m;
+  }
+  var ba=null;
+  xs.forEach(function(h,i){
+    if(i%Math.ceil(n/40))return;
+    var m=fit([xs.map(function(x){return Math.abs(x-h)}),ones],3,5);
+    if(m){m.h=h;ba=lower(m,ba)}
+  });
+  if(ba)ba.build=function(q){return mk([[q[0][0],"abs("+mk([[1,"x"],[-ba.h,""]],0)+")",q[0][1]],[q[1][0],"",1]],tol)};
+  cand.push(be,bs,ba,two(xmin>0,Math.log,"ln(x)"),two(xmin>=0,Math.sqrt,"sqrt(x)"),
+    two(xmin>0||xmax<0,function(x){return 1/x},"1/x"));
+  cand.forEach(function(m){
+    if(!m||!m.build)return;
+    m.score=sc(m);m.r2=sst>0?1-m.sse/sst:1;m.f=m.build(qs(m));
+    try{compile(m.f);res.push(m)}catch(e){}
+  });
+  res.sort(function(a,b){return a.score-b.score});
+  return res;
+}
+
+addFn("sin(x)");
+addFn("x^2/4-2");
+resize();
+})();
+</script>
+</body>
+</html>
